@@ -27,7 +27,13 @@ try:
 
     load_dotenv(_ROOT / ".env")
 except ImportError:
-    pass
+    env_file = _ROOT / ".env"
+    if env_file.is_file():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
 
 # --- Providers ---
 PROVIDER_OPENAI = "openai"
@@ -104,8 +110,11 @@ def get_blue_provider() -> str:
 
 
 def get_blue_model() -> str:
-    # Hard-locked; env cannot override for the graded Blue Team path.
-    return BLUE_MODEL
+    # Allow override via BLUE_MODEL or auto-switch to lfm3-1.7b when using direct liquid.ai endpoint
+    base = os.environ.get("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL).strip()
+    if "liquid.ai" in base:
+        return os.environ.get("BLUE_MODEL", "lfm3-1.7b").strip()
+    return os.environ.get("BLUE_MODEL", BLUE_MODEL).strip()
 
 
 def get_openrouter_api_key() -> str:

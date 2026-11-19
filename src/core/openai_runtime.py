@@ -62,14 +62,18 @@ class OpenAIRunner:
             return block_msg
 
         client = self._client()
-        completion = client.chat.completions.create(
-            model=self.model,
-            messages=[
+        kwargs = {
+            "model": self.model,
+            "messages": [
                 {"role": "system", "content": agent.instruction},
                 {"role": "user", "content": user_message},
             ],
-            temperature=self.temperature,
-        )
+        }
+        # Một số model (như o1/o3/gpt-5.6-luna) không hỗ trợ custom temperature != 1
+        if not any(prefix in self.model.lower() for prefix in ["o1", "o3", "luna"]):
+            kwargs["temperature"] = self.temperature
+
+        completion = client.chat.completions.create(**kwargs)
         text = (completion.choices[0].message.content or "").strip()
 
         for hook in self.output_hooks:
